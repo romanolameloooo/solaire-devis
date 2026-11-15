@@ -19,7 +19,7 @@ export async function proxy(request: NextRequest) {
 
   // Lien d'email renvoyé sur une autre page que /auth/callback (ex. l'accueil) : on le redirige au bon endroit
   const sp = request.nextUrl.searchParams;
-  if (request.nextUrl.pathname !== "/auth/callback" && (sp.has("code") || sp.has("token_hash"))) {
+  if (!request.nextUrl.pathname.startsWith("/auth/") && (sp.has("code") || sp.has("token_hash"))) {
     const to = request.nextUrl.clone();
     to.pathname = "/auth/callback";
     return NextResponse.redirect(to);
