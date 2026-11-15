@@ -38,8 +38,8 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
             {access.status !== "active" && (
               <ol className="space-y-3 text-[14.5px]">
                 <li className="flex gap-3"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-[12px] font-bold text-primary">1</span>Payez votre abonnement avec le lien ci-dessous.</li>
-                <li className="flex gap-3"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-[12px] font-bold text-primary">2</span>Indiquez l&apos;email de votre compte ({user.email}) dans le paiement.</li>
-                <li className="flex gap-3"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-[12px] font-bold text-primary">3</span>Votre compte est activé dès réception du paiement.</li>
+                <li className="flex gap-3"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-[12px] font-bold text-primary">2</span>Dans le champ « Email de votre compte SolaDevis », indiquez <strong className="font-semibold">{user.email}</strong>.</li>
+                <li className="flex gap-3"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-[12px] font-bold text-primary">3</span>Votre abonnement est activé sous 24 h. Vos devis existants restent accessibles en attendant.</li>
               </ol>
             )}
           </CardContent></Card>
