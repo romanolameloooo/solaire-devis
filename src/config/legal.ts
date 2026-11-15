@@ -11,13 +11,13 @@ export const LEGAL = {
   /** Statut juridique */
   statut: process.env.NEXT_PUBLIC_LEGAL_STATUT || "entrepreneur individuel",
   /** Numéro d'immatriculation (SIRET en France, NINEA au Sénégal). Laisser vide s'il n'y en a pas encore. */
-  immatriculation: process.env.NEXT_PUBLIC_LEGAL_IMMATRICULATION || "",
+  immatriculation: process.env.NEXT_PUBLIC_LEGAL_IMMATRICULATION || "SIRET 943 025 221 00012",
   /** Adresse */
   adresse: process.env.NEXT_PUBLIC_LEGAL_ADRESSE || "144 route Léon Lachamp",
   /** Code postal et ville */
-  ville: process.env.NEXT_PUBLIC_LEGAL_VILLE || "À compléter : code postal et ville",
+  ville: process.env.NEXT_PUBLIC_LEGAL_VILLE || "13009 Marseille, France",
   /** Email de contact pour les questions de données personnelles */
-  emailContact: process.env.NEXT_PUBLIC_LEGAL_EMAIL || "À compléter : email de contact",
+  emailContact: process.env.NEXT_PUBLIC_LEGAL_EMAIL || "contact.soladevis@gmail.com",
   /** Prestataires techniques (à ajuster si vous changez d'hébergeur) */
   hebergeurs: [
     { nom: "Netlify, Inc.", role: "hébergement du site (États-Unis)" },
