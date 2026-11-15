@@ -1,0 +1,9 @@
+# Déploiement Netlify. Netlify détecte Next.js et installe automatiquement son adaptateur
+# (protection des pages, images de partage, en-têtes de sécurité : tout fonctionne comme en local).
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
