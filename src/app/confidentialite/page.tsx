@@ -13,14 +13,14 @@ export default function PrivacyPage() {
     <LegalLayout title="Politique de confidentialité" updated={LEGAL.miseAJour}>
       <p>
         Cette page explique quelles données personnelles {LEGAL.service} traite, pourquoi, pendant combien de temps, et comment
-        exercer vos droits. Elle s&apos;applique conformément à la loi sénégalaise n° 2008-12 du 25 janvier 2008 sur la protection
-        des données à caractère personnel et, pour les personnes situées dans l&apos;Union européenne, au Règlement général sur la
-        protection des données (RGPD).
+        exercer vos droits. Elle s&apos;applique conformément au Règlement général sur la protection des données (RGPD) et, pour les
+        utilisateurs situés au Sénégal, à la loi sénégalaise n° 2008-12 du 25 janvier 2008 sur la protection des données à
+        caractère personnel.
       </p>
 
       <Section title="1. Qui est responsable de vos données">
         <p>
-          <V>{LEGAL.editeur}</V>, <V>{LEGAL.immatriculation}</V>, dont le siège est situé <V>{LEGAL.adresse}</V>.
+          <V>{LEGAL.editeur}</V>, {LEGAL.statut}{LEGAL.immatriculation ? <>, {LEGAL.immatriculation}</> : null}, <V>{LEGAL.adresse}</V>, <V>{LEGAL.ville}</V>.
           Contact : <V>{LEGAL.emailContact}</V>.
         </p>
         <p>
@@ -94,8 +94,7 @@ export default function PrivacyPage() {
           directement la plupart de vos informations dans Paramètres.
         </p>
         <p>
-          Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir la Commission de protection des données
-          personnelles du Sénégal (CDP), ou l&apos;autorité de protection des données de votre pays.
+          Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir la CNIL (France, cnil.fr), la Commission de protection des données personnelles du Sénégal (CDP), ou l&apos;autorité de protection des données de votre pays.
         </p>
       </Section>
     </LegalLayout>

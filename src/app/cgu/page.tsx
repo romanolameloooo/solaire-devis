@@ -16,7 +16,7 @@ export default function TermsPage() {
       <Section title="1. Objet">
         <p>
           {LEGAL.service} est un service en ligne qui aide les installateurs solaires à dimensionner une installation et à produire
-          des devis au format PDF. Il est édité par <V>{LEGAL.editeur}</V> (<V>{LEGAL.immatriculation}</V>), <V>{LEGAL.adresse}</V>.
+          des devis au format PDF. Il est édité par <V>{LEGAL.editeur}</V>, {LEGAL.statut}{LEGAL.immatriculation ? <>, {LEGAL.immatriculation}</> : null}, <V>{LEGAL.adresse}</V>, <V>{LEGAL.ville}</V>.
           En créant un compte, vous acceptez les présentes conditions.
         </p>
       </Section>
@@ -91,8 +91,7 @@ export default function TermsPage() {
 
       <Section title="10. Droit applicable">
         <p>
-          Les présentes conditions sont soumises au droit sénégalais. En cas de litige, une solution amiable sera recherchée en
-          priorité ; à défaut, les tribunaux de Dakar seront compétents.
+          Les présentes conditions sont soumises au droit français. En cas de litige, une solution amiable sera recherchée en priorité ; à défaut, les tribunaux compétents seront ceux du ressort du domicile de l&apos;éditeur.
         </p>
       </Section>
     </LegalLayout>

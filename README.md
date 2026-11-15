@@ -124,16 +124,9 @@ Supabase envoie les emails (confirmation d'inscription, mot de passe oublié) av
 
 ### Mentions légales (obligatoire)
 
-Les pages **Confidentialité** (`/confidentialite`) et **Conditions d'utilisation** (`/cgu`) sont prêtes, mais il manque vos informations d'éditeur. Tant qu'elles ne sont pas renseignées, elles s'affichent surlignées en orange sur ces pages. Ajoutez dans `.env.local` et dans Netlify :
+Les informations de l'éditeur sont dans `src/config/legal.ts` : nom, statut, adresse, ville, email de contact et, quand vous en aurez un, le numéro SIRET. Une valeur encore manquante s'affiche surlignée en orange sur les pages **Confidentialité** et **CGU**. Vous pouvez aussi les remplacer sans toucher au code avec les variables `NEXT_PUBLIC_LEGAL_*` dans Netlify (voir `.env.example`).
 
-| Variable | Exemple |
-|---|---|
-| `NEXT_PUBLIC_LEGAL_EDITEUR` | Soleil Digital SARL |
-| `NEXT_PUBLIC_LEGAL_IMMATRICULATION` | SARL, NINEA 0012345 2G3, RCCM SN-DKR-2026-B-1234 |
-| `NEXT_PUBLIC_LEGAL_ADRESSE` | Sacré-Cœur 3, Dakar, Sénégal |
-| `NEXT_PUBLIC_LEGAL_EMAIL` | contact@votre-domaine.sn |
-
-Ces textes sont un modèle sérieux, pas un avis juridique : faites-les relire par un juriste avant le lancement.
+Ces textes sont un modèle sérieux, pas un avis juridique : faites-les relire avant le lancement.
 
 ### Cookies
 
