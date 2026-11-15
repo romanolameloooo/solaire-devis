@@ -6,6 +6,7 @@ import { Eye, EyeOff, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Notice } from "@/components/ui/primitives";
 import { createClient } from "@/lib/supabase/client";
+import { authRedirectBase } from "@/lib/env";
 import { authErrorFr, isEmail } from "@/lib/auth-errors";
 import { Turnstile, useAntiSpam } from "@/components/anti-spam";
 
@@ -47,7 +48,7 @@ export default function SignupPage() {
       password: f.password,
       options: {
         data: { company_name: f.company.trim(), phone: f.phone.trim() },
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+        emailRedirectTo: `${authRedirectBase()}/auth/callback?next=/onboarding`,
         captchaToken: spam.captchaToken ?? undefined,
       },
     });

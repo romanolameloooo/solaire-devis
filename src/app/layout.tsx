@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { Analytics, AnalyticsFilter } from "@/components/analytics";
+import { AuthHashHandler } from "@/components/auth-hash-handler";
 import { SITE_URL } from "@/lib/env";
 import "./globals.css";
 
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" className={inter.variable}>
       <body className="min-h-dvh">
+        <AuthHashHandler />
         {children}
         <Toaster
           position="top-center"

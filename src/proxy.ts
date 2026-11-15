@@ -17,6 +17,14 @@ export async function proxy(request: NextRequest) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return NextResponse.next({ request });
 
+  // Lien d'email renvoyé sur une autre page que /auth/callback (ex. l'accueil) : on le redirige au bon endroit
+  const sp = request.nextUrl.searchParams;
+  if (request.nextUrl.pathname !== "/auth/callback" && (sp.has("code") || sp.has("token_hash"))) {
+    const to = request.nextUrl.clone();
+    to.pathname = "/auth/callback";
+    return NextResponse.redirect(to);
+  }
+
   let response = NextResponse.next({ request });
   const supabase = createServerClient(url, key, {
     cookies: {

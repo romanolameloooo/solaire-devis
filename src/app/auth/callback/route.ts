@@ -16,6 +16,12 @@ export async function GET(request: NextRequest) {
   if (code) ok = !(await supabase.auth.exchangeCodeForSession(code)).error;
   else if (tokenHash && type) ok = !(await supabase.auth.verifyOtp({ type, token_hash: tokenHash })).error;
 
-  if (ok) return NextResponse.redirect(`${origin}${type === "recovery" ? "/update-password" : next}`);
+  if (ok) {
+    // Méthode de connexion inscrite dans le jeton : « recovery » = lien de mot de passe oublié
+    const { data } = await supabase.auth.getClaims();
+    const amr = (data?.claims?.amr as { method?: string }[] | undefined) ?? [];
+    const recovery = type === "recovery" || amr.some((m) => m.method === "recovery");
+    return NextResponse.redirect(`${origin}${recovery ? "/update-password" : next}`);
+  }
   return NextResponse.redirect(`${origin}/login?erreur=lien`);
 }

@@ -5,6 +5,7 @@ import { ArrowLeft, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Notice } from "@/components/ui/primitives";
 import { createClient } from "@/lib/supabase/client";
+import { authRedirectBase } from "@/lib/env";
 import { authErrorFr, isEmail } from "@/lib/auth-errors";
 import { Turnstile, useAntiSpam } from "@/components/anti-spam";
 
@@ -24,7 +25,7 @@ export default function ResetPasswordPage() {
     if (spam.captchaMissing()) return setFormError("Cochez la vérification anti-robot ci-dessous.");
     setLoading(true);
     const { error } = await createClient().auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/auth/callback?next=/update-password`,
+      redirectTo: `${authRedirectBase()}/auth/callback?next=/update-password`,
       captchaToken: spam.captchaToken ?? undefined,
     });
     setLoading(false);

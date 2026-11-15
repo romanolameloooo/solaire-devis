@@ -8,6 +8,12 @@ export const PAYMENT_LINK = process.env.NEXT_PUBLIC_PAYMENT_LINK || "";
 export const PRICE_LABEL = process.env.NEXT_PUBLIC_PRICE_LABEL || "15 000 FCFA / mois";
 export const SUPPORT_WHATSAPP = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "";
 
+/** Adresse de retour des liens envoyés par email. En local, on garde localhost. */
+export function authRedirectBase() {
+  if (typeof window !== "undefined" && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)) return window.location.origin;
+  return SITE_URL;
+}
+
 export const isSupabaseConfigured = () => Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 export function logoPublicUrl(path: string | null | undefined, version?: string | number) {
