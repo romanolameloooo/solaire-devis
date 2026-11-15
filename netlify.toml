@@ -7,3 +7,8 @@
 [build.environment]
   NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
+
+# Active explicitement le moteur Next.js de Netlify (pages dynamiques, connexion, images de partage).
+# Sans lui, Netlify publie le dossier .next comme de simples fichiers et toutes les pages répondent 404.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
