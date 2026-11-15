@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Notice } from "@/components/ui/primitives";
+import { SpamHint } from "@/components/spam-hint";
 import { createClient } from "@/lib/supabase/client";
 import { authRedirectBase } from "@/lib/env";
 import { authErrorFr, isEmail } from "@/lib/auth-errors";
@@ -74,7 +75,8 @@ export default function SignupPage() {
         <p className="mt-2 text-[15px] text-muted-foreground">
           Un lien de confirmation a été envoyé à <strong className="text-foreground">{sentTo}</strong>. Cliquez dessus pour activer votre compte.
         </p>
-        <p className="mt-6 text-[13px] text-muted-foreground">Rien reçu ? Regardez dans les spams, ou <button className="font-medium text-primary underline-offset-4 hover:underline" onClick={() => setSentTo("")}>corrigez l&apos;adresse</button>.</p>
+        <SpamHint />
+        <p className="mt-5 text-[13px] text-muted-foreground">Toujours rien ? <button className="font-medium text-primary underline-offset-4 hover:underline" onClick={() => setSentTo("")}>Corrigez l&apos;adresse</button> et réessayez.</p>
       </div>
     );
   }

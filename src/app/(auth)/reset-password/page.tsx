@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Notice } from "@/components/ui/primitives";
+import { SpamHint } from "@/components/spam-hint";
 import { createClient } from "@/lib/supabase/client";
 import { authRedirectBase } from "@/lib/env";
 import { authErrorFr, isEmail } from "@/lib/auth-errors";
@@ -41,6 +42,7 @@ export default function ResetPasswordPage() {
         <p className="mt-2 text-[15px] text-muted-foreground">
           Si un compte existe pour <strong className="text-foreground">{email}</strong>, vous allez recevoir un lien pour choisir un nouveau mot de passe.
         </p>
+        <SpamHint />
         <Button asChild variant="outline" className="mt-6"><Link href="/login">Retour à la connexion</Link></Button>
       </div>
     );
