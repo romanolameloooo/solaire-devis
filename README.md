@@ -167,6 +167,15 @@ Netlify force le HTTPS automatiquement. Le site ajoute aussi les en-têtes de s�
 
 Quand le lien du site est partagé (WhatsApp, Facebook, LinkedIn), une image d'aperçu générée automatiquement s'affiche (`src/app/opengraph-image.tsx`). Le plan du site (`/sitemap.xml`) et `robots.txt` sont générés automatiquement à partir de `NEXT_PUBLIC_SITE_URL` : pensez à la renseigner avec votre vrai domaine. Les pages privées (app, admin) ne sont jamais indexées.
 
+### Modèles d'emails (important)
+
+Les robots anti-spam ouvrent souvent les liens des emails avant l'utilisateur, ce qui « consomme » un lien de réinitialisation classique. Le site a une page `/auth/confirm` qui n'utilise le lien qu'au clic sur un bouton. Pour l'activer, dans Supabase, ouvrez **Authentication > Emails > Templates** :
+
+- **Reset password** : sujet `Réinitialisez votre mot de passe SolaDevis`, puis collez le contenu de `supabase/email-templates/reset-password.html` dans le corps du message.
+- **Confirm signup** (seulement si vous activez la confirmation par email) : sujet `Confirmez votre email SolaDevis`, puis collez `supabase/email-templates/confirm-signup.html`.
+
+Vérifiez aussi que **Authentication > URL Configuration > Site URL** est bien l'adresse du site : c'est elle que les modèles utilisent (`{{ .SiteURL }}`).
+
 ## Personnaliser
 
 | Quoi | Où |
