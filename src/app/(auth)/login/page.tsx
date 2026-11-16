@@ -7,6 +7,7 @@ import { Field, Input, Notice } from "@/components/ui/primitives";
 import { createClient } from "@/lib/supabase/client";
 import { authErrorFr, isEmail } from "@/lib/auth-errors";
 import { Turnstile, useAntiSpam } from "@/components/anti-spam";
+import { ResendConfirmation } from "@/components/resend-confirmation";
 
 function LoginForm() {
   const router = useRouter();
@@ -19,6 +20,7 @@ function LoginForm() {
   const [fieldErr, setFieldErr] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
   const spam = useAntiSpam();
+  const [unconfirmed, setUnconfirmed] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,6 +35,7 @@ function LoginForm() {
     const { error } = await createClient().auth.signInWithPassword({ email: email.trim(), password, options: { captchaToken: spam.captchaToken ?? undefined } });
     if (error) {
       setLoading(false);
+      setUnconfirmed(/not confirmed/i.test(error.message));
       return setError(authErrorFr(error.message));
     }
     router.replace(safeNext);
@@ -45,6 +48,7 @@ function LoginForm() {
       <p className="mt-1.5 text-[15px] text-muted-foreground">Connectez-vous pour retrouver vos devis.</p>
       <form onSubmit={submit} noValidate className="mt-7 space-y-4">
         {error && <Notice>{error}</Notice>}
+        {unconfirmed && <ResendConfirmation email={email.trim()} className="w-full" />}
         <Field label="Email" htmlFor="email" error={fieldErr.email}>
           <Input id="email" type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} invalid={!!fieldErr.email} />
         </Field>
