@@ -20,6 +20,7 @@ function Confirm() {
   const tokenHash = params.get("token_hash");
   const type = (params.get("type") || "recovery") as EmailOtpType;
   const recovery = type === "recovery";
+  const invite = type === "invite";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -33,7 +34,7 @@ function Confirm() {
       setError("Ce lien a expiré ou a déjà servi. Demandez-en un nouveau : il est valable 1 heure.");
       return;
     }
-    window.location.replace(recovery ? "/update-password" : "/app");
+    window.location.replace(recovery ? "/update-password" : invite ? "/update-password?bienvenue=1" : "/app");
   }
 
   if (!tokenHash) {
@@ -51,16 +52,16 @@ function Confirm() {
       <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary-soft text-primary">
         {recovery ? <KeyRound className="size-6" /> : <MailCheck className="size-6" />}
       </span>
-      <h1 className="mt-5 text-2xl font-bold tracking-tight">{recovery ? "Nouveau mot de passe" : "Activez votre compte"}</h1>
+      <h1 className="mt-5 text-2xl font-bold tracking-tight">{recovery ? "Nouveau mot de passe" : invite ? "Rejoindre l'équipe" : "Activez votre compte"}</h1>
       <p className="mt-2 text-[15px] text-muted-foreground">
-        {recovery ? "Cliquez ci-dessous pour choisir votre nouveau mot de passe." : "Cliquez ci-dessous pour confirmer votre adresse email."}
+        {recovery ? "Cliquez ci-dessous pour choisir votre nouveau mot de passe." : invite ? "Vous avez été invité sur SolaDevis. Cliquez ci-dessous pour choisir votre mot de passe." : "Cliquez ci-dessous pour confirmer votre adresse email."}
       </p>
       {error && <Notice className="mt-6 text-left">{error}</Notice>}
       {error ? (
         <Button asChild size="lg" className="mt-6 w-full"><Link href={recovery ? "/reset-password" : "/login"}>{recovery ? "Recevoir un nouveau lien" : "Se connecter"}</Link></Button>
       ) : (
         <Button size="lg" className="mt-6 w-full" onClick={go} loading={loading}>
-          {recovery ? "Choisir mon nouveau mot de passe" : "Confirmer mon email"}
+          {recovery ? "Choisir mon nouveau mot de passe" : invite ? "Rejoindre et choisir mon mot de passe" : "Confirmer mon email"}
         </Button>
       )}
     </div>

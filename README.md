@@ -169,6 +169,24 @@ Les robots anti-spam ouvrent souvent les liens des emails avant l'utilisateur, c
 
 Vérifiez aussi que **Authentication > URL Configuration > Site URL** est bien l'adresse du site : c'est elle que les modèles utilisent (`{{ .SiteURL }}`).
 
+## Mode chantier : équipe, visite, photos, signature
+
+### Mise en place (une seule fois)
+1. **Migration** : dans Supabase > SQL Editor, exécutez `supabase/migrations/0003_equipe_chantier_signature.sql` (déjà appliquée sur votre projet actuel).
+2. **Modèle d'email d'invitation** : Supabase > **Authentication > Emails > Templates > Invite user**. Sujet : `Rejoignez votre équipe sur SolaDevis`, puis collez le contenu de `supabase/email-templates/invite.html`. Comme pour le mot de passe oublié, le lien n'est utilisé qu'au clic sur un bouton, ce qui protège des robots anti-spam.
+
+### Fonctionnement
+- **Équipe** : Paramètres > Équipe (réservé au responsable). Le technicien invité reçoit un email, choisit son mot de passe, puis peut faire des devis, des visites, des photos et faire signer. Il voit le catalogue mais ne peut pas modifier les prix, les réglages, l'abonnement ni l'équipe. Le responsable voit tous les devis ; chaque technicien voit les siens.
+- **Visite technique** : nouvelle étape du devis (adresse, position GPS, toiture, surface, orientation, ombrages, distance, notes) et photos prises avec l'appareil du téléphone. Les photos sont réduites (1600 px, JPEG) puis envoyées dans un stockage privé.
+- **Hors connexion** : une photo ou une signature qui ne part pas reste sur le téléphone (« En attente d'envoi ») et repart toute seule quand le réseau revient.
+- **Signature** : sur place (plein écran, au doigt) ou à distance (« Envoyer pour signature » ouvre WhatsApp avec un lien unique, valable jusqu'à la fin de validité du devis ; le client signe sans compte). Le devis passe en « Accepté », est verrouillé, et le responsable reçoit une notification dans l'app (cloche).
+- **PDF signé** : signature, nom, « Signé électroniquement le JJ/MM/AAAA à HH:MM (GMT) », mention « signature électronique simple » et référence de l'empreinte SHA-256. En option, annexe « Visite technique » avec les photos.
+
+La signature est une **signature électronique simple** : elle atteste l'accord du client, sans prétendre à la valeur d'une signature manuscrite ou certifiée.
+
+### Tests de sécurité
+`supabase/tests/securite.sql` vérifie les droits (technicien, autre entreprise), le lien de signature (mauvais jeton, expiré, déjà signé) et le verrouillage. À exécuter dans le SQL Editor : il crée ses propres comptes fictifs, affiche 37 lignes « ok = true », puis efface tout.
+
 ## Personnaliser
 
 | Quoi | Où |

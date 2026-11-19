@@ -49,7 +49,7 @@ export async function proxy(request: NextRequest) {
     to.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
     return NextResponse.redirect(to);
   }
-  if (user && AUTH_PAGES.includes(path)) {
+  if (user && AUTH_PAGES.includes(path) && !request.nextUrl.searchParams.has("erreur")) {
     const to = request.nextUrl.clone();
     to.pathname = "/app";
     to.search = "";

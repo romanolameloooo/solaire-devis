@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,14 @@ function LoginForm() {
   const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/app";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(params.get("erreur") === "lien" ? "Ce lien a expiré ou a déjà servi. Demandez-en un nouveau." : "");
+  const erreur = params.get("erreur");
+  const [error, setError] = useState(
+    erreur === "lien" ? "Ce lien a expiré ou a déjà servi. Demandez-en un nouveau."
+    : erreur === "equipe" ? "Votre compte n'est rattaché à aucune entreprise : vous avez peut-être été retiré de l'équipe. Contactez votre responsable."
+    : "",
+  );
+  // Compte sans entreprise : on ferme la session pour éviter une boucle de redirection
+  useEffect(() => { if (erreur === "equipe") createClient().auth.signOut(); }, [erreur]);
   const [fieldErr, setFieldErr] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
   const spam = useAntiSpam();

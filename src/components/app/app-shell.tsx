@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CreditCard, FileText, LogOut, Package, Plus, Settings, Shield } from "lucide-react";
+import { Bell, CreditCard, FileText, LogOut, Package, Plus, Settings, Shield } from "lucide-react";
+import { SyncIndicator } from "@/components/app/sync-indicator";
 import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -19,8 +20,8 @@ function isActive(path: string, href: string, exact?: boolean) {
   return path === href || path.startsWith(href + "/");
 }
 
-export function AppShell({ company, email, logoUrl, access, isAdmin, children }: {
-  company: string; email: string; logoUrl: string | null; access: Access; isAdmin: boolean; children: React.ReactNode;
+export function AppShell({ company, email, logoUrl, access, isAdmin, isOwner, unread, children }: {
+  company: string; email: string; logoUrl: string | null; access: Access; isAdmin: boolean; isOwner: boolean; unread: number; children: React.ReactNode;
 }) {
   const path = usePathname();
   const router = useRouter();
@@ -36,10 +37,10 @@ export function AppShell({ company, email, logoUrl, access, isAdmin, children }:
       <div className="border-b border-destructive/20 bg-destructive-soft px-4 py-2.5 text-[13.5px] text-[#9a3412]">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2">
           <span>{access.endsAt ? "Votre période d'essai ou votre abonnement est terminé." : "Votre compte est inactif."} Vos devis restent consultables.</span>
-          <Link href="/app/abonnement" className="font-semibold underline underline-offset-4">Activer mon abonnement</Link>
+          {isOwner ? <Link href="/app/abonnement" className="font-semibold underline underline-offset-4">Activer mon abonnement</Link> : <span className="font-semibold">Contactez le responsable de l&apos;entreprise.</span>}
         </div>
       </div>
-    ) : access.status === "trial" ? (
+    ) : access.status === "trial" && isOwner ? (
       <div className="border-b border-sun/30 bg-sun-soft px-4 py-2 text-[13px] text-[#7a5000]">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
           <span>Essai gratuit : {access.daysLeft} jour{access.daysLeft === 1 ? "" : "s"} restant{access.daysLeft === 1 ? "" : "s"}</span>
@@ -64,18 +65,29 @@ export function AppShell({ company, email, logoUrl, access, isAdmin, children }:
               <n.icon className="size-[18px]" />{n.label}
             </Link>
           ))}
-          <Link href="/app/abonnement"
-            className={cn("flex h-10 items-center gap-3 rounded-lg px-3 text-[14px] font-medium transition-colors",
-              isActive(path, "/app/abonnement") ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
-            <CreditCard className="size-[18px]" />Abonnement
-          </Link>
+          {isOwner && (
+            <Link href="/app/notifications"
+              className={cn("flex h-10 items-center gap-3 rounded-lg px-3 text-[14px] font-medium transition-colors",
+                isActive(path, "/app/notifications") ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
+              <Bell className="size-[18px]" />Notifications
+              {unread > 0 && <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-sun px-1.5 text-[11.5px] font-bold text-[#17221c]">{unread}</span>}
+            </Link>
+          )}
+          {isOwner && (
+            <Link href="/app/abonnement"
+              className={cn("flex h-10 items-center gap-3 rounded-lg px-3 text-[14px] font-medium transition-colors",
+                isActive(path, "/app/abonnement") ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
+              <CreditCard className="size-[18px]" />Abonnement
+            </Link>
+          )}
           {isAdmin && (
             <Link href="/admin" className="flex h-10 items-center gap-3 rounded-lg px-3 text-[14px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
               <Shield className="size-[18px]" />Administration
             </Link>
           )}
         </nav>
-        <div className="mt-auto border-t border-border p-3">
+        <div className="mt-auto px-3 pb-2"><SyncIndicator className="w-full justify-center" /></div>
+        <div className="border-t border-border p-3">
           <div className="flex items-center gap-3 rounded-lg px-2 py-2">
             <div className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-muted text-[13px] font-semibold">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -83,7 +95,7 @@ export function AppShell({ company, email, logoUrl, access, isAdmin, children }:
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13.5px] font-medium">{company}</p>
-              <p className="truncate text-[12px] text-muted-foreground">{email}</p>
+              <p className="truncate text-[12px] text-muted-foreground">{isOwner ? email : `Technicien · ${email}`}</p>
             </div>
             <button onClick={logout} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Se déconnecter" title="Se déconnecter">
               <LogOut className="size-4" />
@@ -95,7 +107,16 @@ export function AppShell({ company, email, logoUrl, access, isAdmin, children }:
       {/* Barre du haut (mobile) */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 backdrop-blur md:hidden">
         <Brand href="/app" />
-        <button onClick={logout} className="rounded-md p-2 text-muted-foreground" aria-label="Se déconnecter"><LogOut className="size-[18px]" /></button>
+        <div className="flex items-center gap-1">
+          <SyncIndicator />
+          {isOwner && (
+            <Link href="/app/notifications" className="relative rounded-md p-2 text-muted-foreground" aria-label={unread ? `${unread} notification(s) non lue(s)` : "Notifications"}>
+              <Bell className="size-[20px]" />
+              {unread > 0 && <span className="absolute right-1 top-1 grid min-w-4 place-items-center rounded-full bg-sun px-1 text-[10px] font-bold text-[#17221c]">{unread}</span>}
+            </Link>
+          )}
+          <button onClick={logout} className="rounded-md p-2 text-muted-foreground" aria-label="Se déconnecter"><LogOut className="size-[18px]" /></button>
+        </div>
       </header>
 
       {banner}
@@ -111,7 +132,9 @@ export function AppShell({ company, email, logoUrl, access, isAdmin, children }:
             </Link>
           </div>
           <MobileTab href="/app/parametres" label="Réglages" icon={Settings} active={isActive(path, "/app/parametres")} />
-          <MobileTab href="/app/abonnement" label="Abonnement" icon={CreditCard} active={isActive(path, "/app/abonnement")} />
+          {isOwner
+            ? <MobileTab href="/app/abonnement" label="Abonnement" icon={CreditCard} active={isActive(path, "/app/abonnement")} />
+            : <MobileTab href="/app" label="Mes devis" icon={FileText} active={false} />}
         </div>
       </nav>
     </div>

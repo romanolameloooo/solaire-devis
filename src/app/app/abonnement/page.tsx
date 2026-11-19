@@ -14,8 +14,20 @@ export const metadata = { title: "Abonnement" };
 
 export default async function SubscriptionPage({ searchParams }: { searchParams: Promise<{ bloque?: string }> }) {
   const { bloque } = await searchParams;
-  const { user, profile } = await requireProfile();
+  const { user, profile, isOwner } = await requireProfile();
   const access = getAccess(profile);
+  if (!isOwner) {
+    return (
+      <>
+        <PageHeader title="Abonnement" />
+        <Card><CardContent className="space-y-4">
+          <PlanSummary access={access} />
+          <p className="text-[14.5px] text-muted-foreground">L&apos;abonnement de {profile.company_name || "votre entreprise"} est géré par son responsable. {access.status === "expired" ? "Prévenez-le pour qu'il le réactive : en attendant, vous pouvez consulter vos devis mais pas en créer de nouveaux." : ""}</p>
+          <Button asChild variant="outline"><Link href="/app">Retour à mes devis</Link></Button>
+        </CardContent></Card>
+      </>
+    );
+  }
   const checkout = await getPaymentProvider().getCheckoutUrl({ userId: profile.id, email: user.email ?? null, companyName: profile.company_name });
   const support = SUPPORT_WHATSAPP
     ? whatsappLink(SUPPORT_WHATSAPP, `Bonjour, j'ai payé mon abonnement SolaDevis. Mon compte : ${user.email}`)

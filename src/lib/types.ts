@@ -55,6 +55,56 @@ export interface QuoteInputs {
   tech: TechSettings;
 }
 
+export type Role = "owner" | "technician";
+
+export interface TeamMember {
+  company_id: string;
+  user_id: string;
+  role: Role;
+  email: string;
+  created_at: string;
+}
+
+export type RoofType = "dalle" | "tole" | "tuile" | "sol";
+
+/** Visite technique sur place */
+export interface Visit {
+  address?: string;
+  lat?: number | null;
+  lng?: number | null;
+  accuracy?: number | null;
+  roof?: RoofType | "";
+  surfaceM2?: number | null;
+  orientation?: string;
+  shading?: boolean | null;
+  shadingNote?: string;
+  distanceM?: number | null;
+  notes?: string;
+}
+
+export const ROOF_LABEL: Record<RoofType, string> = { dalle: "Dalle béton", tole: "Tôle", tuile: "Tuile", sol: "Au sol" };
+
+export interface QuotePhoto {
+  id: string;
+  quote_id: string;
+  company_id: string;
+  path: string;
+  caption: string;
+  width: number | null;
+  height: number | null;
+  created_at: string;
+}
+
+export interface AppNotification {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  quote_id: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
 export interface QuoteRow {
   id: string;
   user_id: string;
@@ -75,6 +125,14 @@ export interface QuoteRow {
   status: QuoteStatus;
   created_at: string;
   updated_at: string;
+  created_by?: string | null;
+  visit?: Visit | null;
+  signed_at?: string | null;
+  signer_name?: string | null;
+  signature_image?: string | null;
+  signature_hash?: string | null;
+  signature_method?: "onsite" | "remote" | null;
+  sign_token_expires_at?: string | null;
 }
 
 export const STATUS_LABEL: Record<QuoteStatus, string> = {

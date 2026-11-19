@@ -1,14 +1,15 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Notice } from "@/components/ui/primitives";
 import { createClient } from "@/lib/supabase/client";
 import { authErrorFr } from "@/lib/auth-errors";
 
-export default function UpdatePasswordPage() {
+function UpdatePasswordForm() {
   const router = useRouter();
+  const welcome = useSearchParams().get("bienvenue") === "1";
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
   const [err, setErr] = useState<{ pw?: string; pw2?: string }>({});
@@ -39,8 +40,8 @@ export default function UpdatePasswordPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold tracking-tight">Nouveau mot de passe</h1>
-      <p className="mt-1.5 text-[15px] text-muted-foreground">Choisissez un mot de passe d&apos;au moins 8 caractères.</p>
+      <h1 className="text-2xl font-bold tracking-tight">{welcome ? "Bienvenue dans l'équipe" : "Nouveau mot de passe"}</h1>
+      <p className="mt-1.5 text-[15px] text-muted-foreground">{welcome ? "Choisissez votre mot de passe (8 caractères minimum) : vous l'utiliserez pour vous connecter sur votre téléphone." : "Choisissez un mot de passe d'au moins 8 caractères."}</p>
       <form onSubmit={submit} noValidate className="mt-7 space-y-4">
         {formError && <Notice>{formError}</Notice>}
         <Field label="Nouveau mot de passe" htmlFor="pw" error={err.pw}>
@@ -52,5 +53,13 @@ export default function UpdatePasswordPage() {
         <Button type="submit" size="lg" className="w-full" loading={loading}>Enregistrer</Button>
       </form>
     </>
+  );
+}
+
+export default function UpdatePasswordPage() {
+  return (
+    <Suspense>
+      <UpdatePasswordForm />
+    </Suspense>
   );
 }

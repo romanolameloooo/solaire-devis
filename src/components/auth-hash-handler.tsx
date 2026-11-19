@@ -28,7 +28,7 @@ export function AuthHashHandler() {
       .auth.setSession({ access_token, refresh_token })
       .then(({ error }: { error: unknown }) => {
         if (error) window.location.replace("/login?erreur=lien");
-        else window.location.replace(type === "recovery" ? "/update-password" : "/app");
+        else window.location.replace(type === "recovery" ? "/update-password" : type === "invite" ? "/update-password?bienvenue=1" : "/app");
       });
   }, []);
   return null;

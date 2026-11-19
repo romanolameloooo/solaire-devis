@@ -3,7 +3,7 @@ import autoTable from "jspdf-autotable";
 import { lineTotal, type QuoteLine, type Totals } from "@/lib/calc/engine";
 import type { Mode } from "@/lib/calc/engine";
 import { formatDate, formatDecimal, formatNumber, pdfMoney } from "@/lib/format";
-import { MODE_LABEL } from "@/lib/types";
+import { MODE_LABEL, ROOF_LABEL, type Visit } from "@/lib/types";
 
 export interface PdfCompany {
   name: string;
@@ -44,7 +44,41 @@ export interface PdfQuote {
     roiAnnees: number | null;
   };
   conditions: string;
+  /** Présent quand le devis a été signé (signature électronique simple) */
+  signature?: PdfSignature | null;
 }
+
+export interface PdfSignature {
+  /** Image PNG de la signature (data URL) */
+  image: string;
+  name: string;
+  signedAt: string | Date;
+  hash: string;
+  method: "onsite" | "remote" | null;
+}
+
+export interface PdfPhoto {
+  dataUrl: string;
+  width: number;
+  height: number;
+  caption: string;
+}
+
+/** Annexe « Visite technique » (facultative) */
+export interface PdfAnnex {
+  visit: Visit;
+  photos: PdfPhoto[];
+}
+
+/** « 19/11/2026 à 14:05 » à l'heure de Dakar / Abidjan (GMT), quel que soit le fuseau du téléphone. */
+export function formatSignedAt(d: string | Date): string {
+  const x = typeof d === "string" ? new Date(d) : d;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(x.getUTCDate())}/${p(x.getUTCMonth() + 1)}/${x.getUTCFullYear()} à ${p(x.getUTCHours())}:${p(x.getUTCMinutes())}`;
+}
+
+/** Référence courte de l'empreinte SHA-256 : « 3F9A 2C41 7B0E 55D2 » (16 premiers caractères). */
+export const shortHash = (h: string) => (h.slice(0, 16).toUpperCase().match(/.{1,4}/g) ?? []).join(" ");
 
 /**
  * La police standard Helvetica de jsPDF couvre le jeu Latin-1 / WinAnsi (é, è, à, ç, ô, «, », ×, •).
@@ -70,7 +104,7 @@ const LINE: [number, number, number] = [226, 230, 223];
 const qtyText = (l: QuoteLine) =>
   l.unit === "kWc" ? `${formatDecimal(l.qty, 2, " ")} kWc` : l.unit === "forfait" ? "1 forfait" : formatDecimal(l.qty, 2, " ");
 
-export function buildQuotePdf(company: PdfCompany, q: PdfQuote, logo?: PdfLogo | null): jsPDF {
+export function buildQuotePdf(company: PdfCompany, q: PdfQuote, logo?: PdfLogo | null, annex?: PdfAnnex | null): jsPDF {
   const d = new jsPDF({ unit: "mm", format: "a4", compress: true });
   const W = 210, H = 297, M = 16;
   const T = pdfText;
@@ -218,7 +252,7 @@ export function buildQuotePdf(company: PdfCompany, q: PdfQuote, logo?: PdfLogo |
   /* -------- Conditions (à gauche) + Bon pour accord (à droite) */
   const signW = 74, gap = 8, condW = W - 2 * M - signW - gap;
   const cond = q.conditions.trim() ? (d.setFontSize(8.6), d.splitTextToSize(T(q.conditions), condW) as string[]) : [];
-  const blockH = Math.max(cond.length ? 8 + cond.length * 4 : 0, 31);
+  const blockH = Math.max(cond.length ? 8 + cond.length * 4 : 0, q.signature ? 44 : 31);
   if (y + blockH > H - 16) { d.addPage(); y = 20; }
   if (cond.length) {
     d.setFont("helvetica", "bold");
@@ -238,10 +272,34 @@ export function buildQuotePdf(company: PdfCompany, q: PdfQuote, logo?: PdfLogo |
   d.setFont("helvetica", "normal");
   d.setFontSize(7.8);
   d.setTextColor(...MUTED);
-  d.text("Date, signature et cachet du client", sx, y + 7);
-  d.setDrawColor(200, 206, 198);
-  d.setLineWidth(0.25);
-  d.roundedRect(sx, y + 9, signW, 22, 1.5, 1.5);
+  const sig = q.signature;
+  if (sig) {
+    // Devis accepté : signature du client, nom, date et heure, référence de l'empreinte
+    d.text(T(`Signé par ${sig.name}`), sx, y + 7, { maxWidth: signW });
+    d.setDrawColor(14, 122, 74);
+    d.setLineWidth(0.35);
+    d.roundedRect(sx, y + 9, signW, 22, 1.5, 1.5);
+    try {
+      const props = d.getImageProperties(sig.image);
+      const ratio = props.width / props.height;
+      const bh = 19, bw = Math.min(signW - 4, bh * ratio);
+      d.addImage(sig.image, "PNG", sx + (signW - bw) / 2, y + 10.5, bw, bw / ratio > bh ? bh : bw / ratio);
+    } catch { /* image illisible : le texte suffit */ }
+    d.setFontSize(7.6);
+    d.setTextColor(...INK);
+    d.text(T(`Signé électroniquement le ${formatSignedAt(sig.signedAt)} (GMT)`), sx, y + 35);
+    d.setTextColor(...MUTED);
+    d.text(T(`Signature électronique simple${sig.method === "remote" ? " à distance" : sig.method === "onsite" ? " sur place" : ""}`), sx, y + 38.8);
+    d.text(T(`Empreinte SHA-256 : ${shortHash(sig.hash)}`), sx, y + 42.6);
+  } else {
+    d.text("Date, signature et cachet du client", sx, y + 7);
+    d.setDrawColor(200, 206, 198);
+    d.setLineWidth(0.25);
+    d.roundedRect(sx, y + 9, signW, 22, 1.5, 1.5);
+  }
+
+  /* -------- Annexe « Visite technique » (facultative) */
+  if (annex) drawAnnex(d, q, annex);
 
   /* -------- Pied de page discret sur chaque page */
   const pages = d.getNumberOfPages();
@@ -255,9 +313,66 @@ export function buildQuotePdf(company: PdfCompany, q: PdfQuote, logo?: PdfLogo |
     d.setTextColor(108, 118, 112);
     const foot = [company.name, company.phone, company.email, company.ninea ? `NINEA / RC ${company.ninea}` : ""].filter(Boolean).join("  ·  ");
     d.text(T(foot), M, H - 8.5, { maxWidth: W - 2 * M - 30 });
-    d.text(T(`${q.number}  ·  Page ${p}/${pages}`), W - M, H - 8.5, { align: "right" });
+    d.text(T(`${q.number}${q.signature ? "  ·  Signé" : ""}  ·  Page ${p}/${pages}`), W - M, H - 8.5, { align: "right" });
   }
   return d;
+}
+
+function drawAnnex(d: jsPDF, q: PdfQuote, annex: PdfAnnex) {
+  const W = 210, H = 297, M = 16;
+  const T = pdfText;
+  const v = annex.visit;
+  d.addPage();
+  let y = 20;
+  d.setFont("helvetica", "bold");
+  d.setFontSize(15);
+  d.setTextColor(...GREEN);
+  d.text("Annexe : visite technique", M, y);
+  d.setFont("helvetica", "normal");
+  d.setFontSize(9);
+  d.setTextColor(...MUTED);
+  d.text(T(`Devis ${q.number} · ${q.client.name}${q.client.city ? ` · ${q.client.city}` : ""}`), M, y + 6);
+  y += 14;
+
+  const rows: [string, string][] = [
+    ["Adresse du chantier", v.address || ""],
+    ["Position GPS", v.lat != null && v.lng != null ? `${formatDecimal(v.lat, 5, " ")}, ${formatDecimal(v.lng, 5, " ")}${v.accuracy ? ` (précision ± ${v.accuracy} m)` : ""}` : ""],
+    ["Type de toiture", v.roof ? ROOF_LABEL[v.roof] : ""],
+    ["Surface disponible", v.surfaceM2 != null ? `environ ${formatDecimal(v.surfaceM2, 1, " ")} m²` : ""],
+    ["Orientation", v.orientation || ""],
+    ["Ombrages", v.shading == null ? "" : v.shading ? `Oui${v.shadingNote ? ` : ${v.shadingNote}` : ""}` : "Non"],
+    ["Distance panneaux - onduleur", v.distanceM != null ? `environ ${formatDecimal(v.distanceM, 1, " ")} m` : ""],
+    ["Notes", v.notes || ""],
+  ].filter(([, val]) => val) as [string, string][];
+
+  if (rows.length) {
+    autoTable(d, {
+      startY: y,
+      margin: { left: M, right: M, bottom: 20 },
+      body: rows.map(([k, val]) => [T(k), T(val)]),
+      theme: "plain",
+      styles: { font: "helvetica", fontSize: 9.5, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }, textColor: INK, lineColor: LINE, lineWidth: { bottom: 0.2 } },
+      columnStyles: { 0: { cellWidth: 52, textColor: MUTED }, 1: { cellWidth: "auto" } },
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    y = ((d as any).lastAutoTable?.finalY ?? y) + 8;
+  }
+
+  // Photos : 2 par page (la première page de l'annexe en accueille 1 si les infos prennent de la place)
+  const slotH = 112, gap = 8;
+  annex.photos.forEach((ph, i) => {
+    if (y + slotH > H - 18) { d.addPage(); y = 20; }
+    const maxW = W - 2 * M, maxH = slotH - 10;
+    const r = ph.width / ph.height;
+    let w = maxW, h = w / r;
+    if (h > maxH) { h = maxH; w = h * r; }
+    try { d.addImage(ph.dataUrl, "JPEG", M + (maxW - w) / 2, y, w, h, undefined, "FAST"); } catch { /* photo illisible */ }
+    d.setFont("helvetica", "bold");
+    d.setFontSize(9.5);
+    d.setTextColor(...INK);
+    d.text(T(`Photo ${i + 1}${ph.caption ? ` : ${ph.caption}` : ""}`), M, y + h + 5);
+    y += h + 5 + gap;
+  });
 }
 
 /** Charge une image (URL publique) et la convertit en PNG data URL, avec ses dimensions. */
@@ -277,6 +392,24 @@ export async function loadLogo(url: string | null): Promise<PdfLogo | null> {
     ctx.fillRect(0, 0, c.width, c.height);
     ctx.drawImage(bmp, 0, 0, c.width, c.height);
     return { dataUrl: c.toDataURL("image/png"), width: c.width, height: c.height };
+  } catch {
+    return null;
+  }
+}
+
+/** Charge une photo de chantier (URL signée) en JPEG, réduite pour garder un PDF léger. */
+export async function loadPhoto(url: string, caption: string, maxWidth = 1400): Promise<PdfPhoto | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const bmp = await createImageBitmap(await res.blob());
+    const k = Math.min(1, maxWidth / bmp.width);
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * k);
+    c.height = Math.round(bmp.height * k);
+    const ctx = c.getContext("2d")!;
+    ctx.drawImage(bmp, 0, 0, c.width, c.height);
+    return { dataUrl: c.toDataURL("image/jpeg", 0.75), width: c.width, height: c.height, caption };
   } catch {
     return null;
   }

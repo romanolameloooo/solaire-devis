@@ -17,10 +17,15 @@ import { APPLIANCE_PRESETS, presetToAppliance } from "@/lib/calc/presets";
 import { addDays, formatDecimal, formatFCFA, formatNumber } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import { downloadQuotePdf } from "@/lib/quote/pdf-actions";
+import { VisitEditor } from "@/components/quote/visit-editor";
+import { PhotoManager } from "@/components/quote/photo-manager";
+import { attachDraft, uid } from "@/lib/offline/queue";
 import { cn } from "@/lib/utils";
-import type { CatalogItem, Profile, QuoteInputs, QuoteRow } from "@/lib/types";
+import type { CatalogItem, Profile, QuoteInputs, QuoteRow, Visit } from "@/lib/types";
 
-const STEPS = ["Client", "Installation", "Consommation", "Devis"];
+const STEPS = ["Client", "Visite", "Installation", "Consommation", "Devis"];
+// Index des étapes
+const CLIENT = 0, VISITE = 1, INSTALL = 2, CONSO = 3, DEVIS = 4;
 
 const toEntry = (c: CatalogItem): CatalogEntry => ({ id: c.id, model: c.model, power: c.power == null ? null : Number(c.power), price: c.price == null ? null : Number(c.price) });
 
@@ -63,7 +68,7 @@ function initialState(source: QuoteRow | null, panels: CatalogEntry[], batteries
 /** Signature des entrées qui déterminent les lignes automatiques. */
 const sigOf = (s: State) => JSON.stringify([s.mode, s.consumptionKind, s.appliances, s.kwhMois, s.nuitPct, s.pointeKw, s.couverture, s.joursRes, s.panelId, s.batteryId]);
 
-export function QuoteWizard({ profile, catalog, source, editing }: { profile: Profile; catalog: CatalogItem[]; source: QuoteRow | null; editing: boolean }) {
+export function QuoteWizard({ profile, catalog, source, editing, companyId }: { profile: Profile; catalog: CatalogItem[]; source: QuoteRow | null; editing: boolean; companyId: string }) {
   const router = useRouter();
   const tech = useMemo(() => ({ ...DEFAULT_TECH, ...profile.tech }), [profile.tech]);
   const panels = useMemo(() => catalog.filter((c) => c.type === "panel").map(toEntry), [catalog]);
@@ -71,7 +76,10 @@ export function QuoteWizard({ profile, catalog, source, editing }: { profile: Pr
   const batteries = useMemo(() => catalog.filter((c) => c.type === "battery").map(toEntry), [catalog]);
 
   const [s, setS] = useState<State>(() => initialState(source, panels, batteries));
-  const [step, setStep] = useState(source ? 3 : 0);
+  const [step, setStep] = useState(source ? DEVIS : CLIENT);
+  const [visit, setVisit] = useState<Visit>(() => ({ ...(source?.visit ?? {}) }));
+  // Photos : rattachées au devis s'il existe déjà, sinon à une clé provisoire jusqu'à l'enregistrement
+  const [photoKey] = useState(() => (editing && source ? source.id : `draft:${uid()}`));
   const [lines, setLines] = useState<QuoteLine[]>(() => (source ? source.lines : []));
   const [linesSig, setLinesSig] = useState<string>(() => (source ? sigOf(initialState(source, panels, batteries)) : ""));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -113,16 +121,16 @@ export function QuoteWizard({ profile, catalog, source, editing }: { profile: Pr
 
   function validate(st: number): boolean {
     const er: Record<string, string> = {};
-    if (st === 0) {
+    if (st === CLIENT) {
       if (!s.client.name.trim()) er.name = "Indiquez le nom du client : il apparaît sur le devis.";
       if (s.client.phone && s.client.phone.replace(/\D/g, "").length < 8) er.phone = "Numéro incomplet.";
     }
-    if (st === 1) {
+    if (st === INSTALL) {
       if (!panel) er.panel = "Ajoutez un panneau dans votre catalogue.";
       if (s.mode !== "autonome" && !(num(s.couverture) > 0 && num(s.couverture) <= 100)) er.couverture = "Entre 1 et 100 %.";
       if (s.mode !== "reseau" && (num(s.joursRes) < 0 || num(s.joursRes) > 10)) er.joursRes = "Entre 0 et 10 jours.";
     }
-    if (st === 2) {
+    if (st === CONSO) {
       if (s.consumptionKind === "appareils") {
         if (!s.appliances.length) er.appliances = "Ajoutez au moins un appareil.";
         else if (conso.E <= 0) er.appliances = "Indiquez la puissance et les heures d'utilisation des appareils.";
@@ -141,13 +149,13 @@ export function QuoteWizard({ profile, catalog, source, editing }: { profile: Pr
 
   const go = (n: number) => {
     if (n > step) { for (let i = step; i < n; i++) if (!validate(i)) { setStep(i); return; } }
-    if (n === 3) refreshLines();
+    if (n === DEVIS) refreshLines();
     setStep(n);
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   async function save(withPdf: boolean) {
-    for (let i = 0; i < 3; i++) if (!validate(i)) { setStep(i); return; }
+    for (let i = 0; i < DEVIS; i++) if (!validate(i)) { setStep(i); return; }
     if (withPdf && !canPdf) return;
     if (emptyLabels) return toast.error("Une ligne n'a pas de désignation.");
     setSaving(withPdf ? "pdf" : "draft");
@@ -165,6 +173,7 @@ export function QuoteWizard({ profile, catalog, source, editing }: { profile: Pr
       mode: s.mode, inputs, result, lines: lines.map((l) => ({ ...l, label: l.label.trim() })),
       remise_pct: num(s.remise), tva_pct: num(profile.tva), total_ht: Math.round(totals.ht), total_ttc: Math.round(totals.ttc),
       kwc: r.kwc, valid_until: addDays(new Date(), num(profile.validite_jours) || 30).toISOString().slice(0, 10),
+      visit,
     };
     const supabase = createClient();
     const q = editing && source
@@ -173,6 +182,11 @@ export function QuoteWizard({ profile, catalog, source, editing }: { profile: Pr
     const { data, error } = await q;
     if (error || !data) {
       setSaving("");
+      if (error?.message?.includes("QUOTE_LOCKED")) {
+        toast.error("Ce devis est signé", { description: "Il ne peut plus être modifié. Dupliquez-le pour faire une nouvelle version." });
+        if (source) router.push(`/app/devis/${source.id}`);
+        return;
+      }
       if (error?.message?.includes("SUBSCRIPTION_EXPIRED")) {
         toast.error("Votre essai est terminé", { description: "Activez votre abonnement pour créer de nouveaux devis." });
         router.push("/app/abonnement?bloque=1");
@@ -181,6 +195,8 @@ export function QuoteWizard({ profile, catalog, source, editing }: { profile: Pr
       return toast.error("Le devis n'a pas pu être enregistré. Vérifiez votre connexion.");
     }
     const saved = data as QuoteRow;
+    // Les photos prises avant l'enregistrement partent maintenant (ou dès que le réseau revient)
+    if (photoKey.startsWith("draft:")) await attachDraft(photoKey, saved.id);
     if (withPdf) {
       try {
         await downloadQuotePdf(saved, profile);
@@ -209,7 +225,7 @@ export function QuoteWizard({ profile, catalog, source, editing }: { profile: Pr
       </div>
 
       {/* Étapes */}
-      <ol className="mb-6 grid grid-cols-4 gap-1.5">
+      <ol className="mb-6 grid grid-cols-5 gap-1.5">
         {STEPS.map((t, i) => (
           <li key={t}>
             <button type="button" onClick={() => go(i)} className="group flex w-full flex-col gap-1.5 text-left">
@@ -224,7 +240,7 @@ export function QuoteWizard({ profile, catalog, source, editing }: { profile: Pr
 
       {/* La clé force le remontage : chaque étape entre avec un glissement court */}
       <div key={step} className="sd-step">
-      {step === 0 && (
+      {step === CLIENT && (
         <Card><CardContent className="space-y-4">
           <div>
             <h2 className="text-[16px] font-semibold">Pour qui est ce devis ?</h2>
@@ -244,7 +260,22 @@ export function QuoteWizard({ profile, catalog, source, editing }: { profile: Pr
         </CardContent></Card>
       )}
 
-      {step === 1 && (
+      {step === VISITE && (
+        <div className="space-y-4">
+          <Card><CardContent className="space-y-1">
+            <h2 className="text-[16px] font-semibold">Visite technique</h2>
+            <p className="pb-4 text-[13.5px] text-muted-foreground">À remplir sur place. Tout est facultatif : passez si vous n&apos;êtes pas chez le client.</p>
+            <VisitEditor visit={visit} onChange={setVisit} />
+          </CardContent></Card>
+          <Card><CardContent>
+            <h2 className="text-[16px] font-semibold">Photos du chantier</h2>
+            <p className="pb-4 text-[13.5px] text-muted-foreground">Elles sont réduites avant l&apos;envoi pour passer même avec une connexion lente.</p>
+            <PhotoManager quoteKey={photoKey} companyId={companyId} />
+          </CardContent></Card>
+        </div>
+      )}
+
+      {step === INSTALL && (
         <div className="space-y-4">
           <Card><CardContent>
             <h2 className="text-[16px] font-semibold">Type d&apos;installation</h2>
@@ -286,7 +317,7 @@ export function QuoteWizard({ profile, catalog, source, editing }: { profile: Pr
         </div>
       )}
 
-      {step === 2 && (
+      {step === CONSO && (
         <Card><CardContent>
           <h2 className="text-[16px] font-semibold">Consommation du client</h2>
           <ChoiceCards
@@ -321,13 +352,13 @@ export function QuoteWizard({ profile, catalog, source, editing }: { profile: Pr
         </CardContent></Card>
       )}
 
-      {step === 3 && (
+      {step === DEVIS && (
         <div className="space-y-4">
           {!r.ok ? (
             <Card><CardContent className="space-y-3">
               {r.empty ? <p className="text-[14.5px] text-muted-foreground">Ajoutez la consommation du client pour voir le dimensionnement.</p> : null}
               {r.errors.map((e) => <Notice key={e} icon={<AlertTriangle />}>{e}</Notice>)}
-              <Button variant="outline" onClick={() => go(2)}><ArrowLeft />Revenir à la consommation</Button>
+              <Button variant="outline" onClick={() => go(CONSO)}><ArrowLeft />Revenir à la consommation</Button>
             </CardContent></Card>
           ) : (
             <>
@@ -380,10 +411,10 @@ export function QuoteWizard({ profile, catalog, source, editing }: { profile: Pr
 
       {/* Barre d'actions */}
       <div className="sticky bottom-[var(--bottom-nav,0px)] z-20 -mx-4 mt-6 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
-        {step < 3 ? (
+        {step < DEVIS ? (
           <div className="flex gap-2 md:justify-end">
             {step > 0 && <Button variant="outline" onClick={() => go(step - 1)} className="flex-1 md:flex-none"><ArrowLeft />Retour</Button>}
-            <Button onClick={() => go(step + 1)} className="flex-[2] md:flex-none">{step === 2 ? "Voir le dimensionnement" : "Continuer"}<ArrowRight /></Button>
+            <Button onClick={() => go(step + 1)} className="flex-[2] md:flex-none">{step === CONSO ? "Voir le dimensionnement" : "Continuer"}<ArrowRight /></Button>
           </div>
         ) : (
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-end">

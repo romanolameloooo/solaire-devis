@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
     const { data } = await supabase.auth.getClaims();
     const amr = (data?.claims?.amr as { method?: string }[] | undefined) ?? [];
     const recovery = type === "recovery" || amr.some((m) => m.method === "recovery");
-    return NextResponse.redirect(`${base}${recovery ? "/update-password" : next}`);
+    const invite = type === "invite" || amr.some((m) => m.method === "invite");
+    return NextResponse.redirect(`${base}${recovery ? "/update-password" : invite ? "/update-password?bienvenue=1" : next}`);
   }
   return NextResponse.redirect(`${base}/login?erreur=lien`);
 }

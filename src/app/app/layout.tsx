@@ -8,8 +8,11 @@ import { AppShell } from "@/components/app/app-shell";
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, profile } = await requireProfile();
+  const { supabase, user, profile, isOwner } = await requireProfile();
   const access = getAccess(profile);
+  const { count: unread } = isOwner
+    ? await supabase.from("notifications").select("id", { count: "exact", head: true }).is("read_at", null)
+    : { count: 0 };
   return (
     <AppShell
       company={profile.company_name || "Mon entreprise"}
@@ -17,6 +20,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       logoUrl={logoPublicUrl(profile.logo_path)}
       access={access}
       isAdmin={isAdminEmail(user.email)}
+      isOwner={isOwner}
+      unread={unread ?? 0}
     >
       {children}
     </AppShell>
